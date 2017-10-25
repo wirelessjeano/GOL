@@ -1,0 +1,25 @@
+﻿@model HomeModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+
+
+<div class="row">
+    <div class="col-md-12">
+        <h2>Conway's Game Of Life</h2>
+        @using (Html.BeginForm("IndexPost", "Home", null, FormMethod.Post))
+        {
+		    <div class="form-group">
+                <label>Columns:</label>
+                 @Html.TextBoxFor(m => m.Columns,new { @class = "form-control" })
+              </div>
+            <div class="form-group">
+                <label>Rows:</label>
+                 @Html.TextBoxFor(m => m.Rows, new { @class = "form-control" })
+             </div>
+            <br>
+            <input type="submit" value="Create Game" />
+        }
+    </div>
+</div>

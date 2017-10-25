@@ -1,0 +1,232 @@
+﻿@model GridModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<Style>
+    .table{
+        display:table;
+        width:100%;
+        table-layout:fixed;
+	    margin-bottom:0;
+    }
+    .table_cell{
+        display:table-cell;
+        width:100%;
+	    border:solid 1px black;
+        cursor: crosshair;
+	    -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -o-user-select: none;
+        user-select: none;
+    }
+
+	[data-alive="1"] {
+        background-color:black;
+    }
+</Style>
+
+
+<div class="row">
+    <div class="col-md-12">
+        <h2>Conway's Game Of Life</h2>
+		<h3>Instruction: Click on the grid and drag your mouse to start the game</h3>
+		<div class="row">
+            <div class="col-md-12">
+                <select id="ddlEngine">
+                  <option value="0">JavaScript Engine</option>
+                  <option value="1">C# Engine</option>
+                </select>
+            </div>
+        </div>
+		<br>
+        @for (int column = 0; column< Model.Columns; column++)
+        {
+            <div class="table">
+                @for(int row = 0; row < Model.Rows; row++)
+                {
+                    <div class="table_cell" data-column="@column" data-row="@row" data-alive="@Model.Cells[column,row]">
+                        &nbsp;
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+
+@section Scripts
+{
+    <script type="text/JavaScript">
+	    var leftButtonDown = false;
+	
+        $(document).ready(function(){
+
+            $(document).mousedown(function(e){
+                // Left mouse button was pressed, set flag
+                if(e.which === 1) leftButtonDown = true;
+            });
+            $(document).mouseup(function(e){
+                // Left mouse button was released, clear flag
+                if(e.which === 1) leftButtonDown = false;
+            });
+	
+           $(".table_cell").on("mousemove", function(){
+	            if(leftButtonDown)
+                {   
+	                $(this).attr("data-alive", "1");
+	            }
+	       });
+
+	      timer();
+
+        });
+
+	   function GetCurrentState()
+	   {
+	        var cells = [[]];
+
+            $('.table_cell').each(function(){
+                var column = parseInt($(this).attr("data-column"));
+                var row = parseInt($(this).attr("data-row"));
+                var alive = parseInt($(this).attr("data-alive"));
+
+                if(!cells[column])
+                     cells[column] = []
+
+                cells[column][row] = alive;
+
+            });
+
+	        return cells;
+	   }
+
+       function SetState(cells)
+	   {
+            for(var i = 0; i < cells.length; i++) {
+                var row = cells[i];
+                for(var j = 0; j < row.length; j++) {
+                    var cell = row[j];
+                    $('.table_cell[data-column="' + i + '"][data-row="' + j + '"]').attr("data-alive",cell);
+                }
+            }
+	   }
+
+	    function LivingNeighborsCount(column, row, previousGenerationCells,columns, rows)
+	    {
+	        var alive = 0;
+
+            // R
+	        if (column != columns - 1)
+                if (previousGenerationCells[column + 1][row] == 1)
+                    alive++;
+
+            // BR
+            if (column != columns - 1 && row != rows - 1)
+                if (previousGenerationCells[column + 1][row + 1] == 1)
+                    alive++;
+
+            // B
+            if (row != rows - 1)
+                if (previousGenerationCells[column][row + 1] == 1)
+                    alive++;
+
+            // BL
+            if (column != 0 && row != rows - 1)
+                if (previousGenerationCells[column - 1][row + 1] == 1)
+                    alive++;
+
+            // L
+            if (column != 0)
+                if (previousGenerationCells[column - 1][row] == 1)
+                    alive++;
+
+            // TL
+            if (column != 0 && row != 0)
+                if (previousGenerationCells[column - 1][row - 1] == 1)
+                    alive++;
+
+            // T
+            if (row != 0)
+                if (previousGenerationCells[column][row - 1] == 1)
+                    alive++;
+
+            // TR
+            if (column != columns - 1 && row != 0)
+                if (previousGenerationCells[column + 1][row - 1] == 1)
+                    alive++;
+
+            return alive;
+	    }
+        var i = 10;
+        function timer () {           
+           setTimeout(function () {   
+                var cells = GetCurrentState();
+   
+	            if($("#ddlEngine").val() == "1")
+	            {
+	                 $.ajax({
+                        type: "POST",
+                        url: "/home/GridUpdate/",
+                        data: JSON.stringify(cells),
+                        contentType: "application/json; charset=utf-8",
+                        dataType: "json",
+                        statusCode: {
+                            200: function (cells) {
+                              SetState(cells);
+                            }
+                        }
+                    }); 
+	            }
+	            else
+	            {
+	                var previousGenerationCells = jQuery.extend(true, {}, cells);
+
+                    var columns = Object.keys(cells).length;
+                    var rows = Object.keys(cells[0]).length;
+
+                    for (var column = 0; column < columns; column++)
+                    {
+                        for (var row = 0; row < rows; row++)
+                        {
+                            var currentCellAlive = previousGenerationCells[column][row] == 1;
+
+                            var count = LivingNeighborsCount(column, row, previousGenerationCells, columns, rows);
+        
+                            var result = false;
+
+                            // Rules
+                            if (currentCellAlive && count < 2)
+                                result = false;
+                            if (currentCellAlive && (count == 2 || count == 3))
+                                result = true;
+                            if (currentCellAlive && count > 3)
+                                result = false;
+                            if (!currentCellAlive && count == 3)
+                                result = true;
+
+                            if(result)
+                            {
+                                cells[column][row] = 1;
+                            }
+                            else
+                            {
+                                cells[column][row] = 0;
+                            }
+                        }
+                    }
+	                
+	                SetState(cells);
+	            }
+
+	           timer();
+                            
+                                  
+           }, 500)
+        }
+    </script>
+}
+
+
+
